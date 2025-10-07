@@ -25,7 +25,6 @@ export default class ClientDAO {
     if (!(client instanceof Client)) {
       throw new Error("O parâmetro deve ser uma instância de Client");
     }
-    console.log(client);
 
     const conn = await conectar();
     const sql = `

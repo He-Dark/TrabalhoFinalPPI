@@ -1,6 +1,6 @@
-import Client from "../models/clientModel.js";
+import Book from "../models/bookModel.js";
 
-export default class ClientController {
+export default class BookController {
   async gravar(req, res) {
     if (req.method != "POST" || !req.is("application/json")) {
       res.status(405).json({ error: "Método não permitido" });
@@ -12,28 +12,22 @@ export default class ClientController {
 
       const dados = req.body;
 
-      if (
-        !dados.cli_cpf ||
-        !dados.cli_nome ||
-        !dados.cli_telefone ||
-        !dados.cli_email
-      ) {
+      if (!dados.liv_titulo || !dados.liv_autor || !dados.cli_id) {
         res.status(400).json({ error: "Dados incompletos" });
       }
 
-      const novoCliente = new Client(
+      const novoLivro = new Book(
         null,
-        dados.cli_cpf,
-        dados.cli_nome,
-        dados.cli_telefone,
-        dados.cli_email
+        dados.liv_titulo,
+        dados.liv_autor,
+        dados.cli_id
       );
 
-      await novoCliente.gravar();
+      await novoLivro.gravar();
 
       res.status(201).json({
-        message: "Cliente criado",
-        cliente: novoCliente,
+        message: "Livro criado",
+        livro: novoLivro,
         status: true,
       });
     } catch (error) {
@@ -45,36 +39,27 @@ export default class ClientController {
     if (req.method != "PUT" || !req.is("application/json")) {
       res.status(405).json({ error: "Método não permitido" });
     }
-
     try {
       if (!req.body) {
         res.status(400).json({ error: "Requisição inválida" });
       }
-
       const { id } = req.params;
-
       const dados = req.body;
-
-      if (
-        !dados.cli_cpf ||
-        !dados.cli_nome ||
-        !dados.cli_telefone ||
-        !dados.cli_email
-      ) {
+      if (!dados.liv_titulo || !dados.liv_autor || !dados.cli_id) {
         res.status(400).json({ error: "Dados incompletos" });
       }
-      const clienteExistente = new Client(
+
+      const livroExistente = new Book(
         id,
-        dados.cli_cpf,
-        dados.cli_nome,
-        dados.cli_telefone,
-        dados.cli_email
+        dados.liv_titulo,
+        dados.liv_autor,
+        dados.cli_id
       );
 
-      await clienteExistente.alterar();
+      await livroExistente.alterar();
       res.status(200).json({
-        message: "Cliente atualizado",
-        cliente: clienteExistente,
+        message: "Livro alterado",
+        livro: livroExistente,
         status: true,
       });
     } catch (error) {
@@ -88,9 +73,12 @@ export default class ClientController {
     }
     try {
       const { id } = req.params;
-      const cliente = new Client(id);
-      await cliente.excluir();
-      res.status(200).json({ message: "Cliente excluído", status: true });
+      const livroExistente = new Book(id);
+      await livroExistente.excluir();
+      res.status(200).json({
+        message: "Livro excluído",
+        status: true,
+      });
     } catch (error) {
       res.status(500).json({ error: error.message, status: false });
     }
@@ -102,9 +90,9 @@ export default class ClientController {
     }
     try {
       const { id } = req.params;
-      const cliente = new Client(id);
-      const resultado = await cliente.consultar();
-      res.status(200).json({ cliente: resultado, status: true });
+      const livro = new Book(id);
+      const resultado = await livro.consultar();
+      res.status(200).json({ livro: resultado, status: true });
     } catch (error) {
       res.status(500).json({ error: error.message, status: false });
     }
@@ -115,9 +103,9 @@ export default class ClientController {
       res.status(405).json({ error: "Método não permitido" });
     }
     try {
-      const cliente = new Client();
-      const resultado = await cliente.consultarTodos();
-      res.status(200).json({ clientes: resultado, status: true });
+      const livro = new Book();
+      const resultado = await livro.consultarTodos();
+      res.status(200).json({ livros: resultado, status: true });
     } catch (error) {
       res.status(500).json({ error: error.message, status: false });
     }
