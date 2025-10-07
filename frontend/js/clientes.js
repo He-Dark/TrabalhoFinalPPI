@@ -1,70 +1,136 @@
-// clientes.js - Simulação CRUD em localStorage
+const formularioCliente = document.getElementById("formCliente");
 
-const CLIENTES_KEY = "app_clientes_v1";
-
-function carregarClientes() {
-  const raw = localStorage.getItem(CLIENTES_KEY);
-  return raw ? JSON.parse(raw) : [];
-}
-
-function salvarClientes(clientes) {
-  localStorage.setItem(CLIENTES_KEY, JSON.stringify(clientes));
-}
-
-function gerarId() {
-  return Date.now().toString();
-}
-
-// Validações simples
-function validarEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-}
-
-function validarCPFFormat(cpf) {
-  // aceita 000.000.000-00 ou somente dígitos
-  const re = /^(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})$/;
-  return re.test(cpf);
-}
-
-// Formatação: se recebeu 11 dígitos, formata com pontos e hífen
-function formatarCPF(cpf) {
-  const digits = cpf.replace(/\D/g, "");
-  if (digits.length !== 11) return cpf;
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
-
-// Render
-function renderClientes() {
-  const clientes = carregarClientes();
-  const tbody = document.querySelector("#tabelaClientes tbody");
-  tbody.innerHTML = "";
-
-  if (clientes.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="5" class="text-center">Nenhum cliente cadastrado.</td></tr>';
-    return;
+formularioCliente.onsubmit = gravarCliente;
+exibirTabelaClientes();
+function validarFormulario() {
+  const formValidado = formularioCliente.checkValidity();
+  if (formValidado) {
+    formularioCliente.classList.remove("was-validated");
+  } else {
+    formularioCliente.classList.add("was-validated");
   }
+  return formValidado;
+}
 
-  clientes.forEach((c) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-<td>${c.nome}</td>
-<td>${c.email}</td>
-<td>${formatarCPF(c.cpf)}</td>
-<td>${c.telefone || ""}</td>
-<td>
-<button class="btn btn-sm btn-primary btn-editar" data-id="${
-      c.id
-    }">Editar</button>
-<button class="btn btn-sm btn-danger btn-excluir" data-id="${
-      c.id
-    }">Excluir</button>
-<a class="btn btn-sm btn-outline-secondary" href="livros.html?clienteId=${
-      c.id
-    }">Ver Livros</a>
-</td>
-`;
-    tbody.appendChild(tr);
-  });
+function gravarCliente(evento) {
+  evento.preventDefault();
+  evento.stopPropagation();
+
+  if (validarFormulario()) {
+    const clienteNome = document.getElementById("clienteNome").value;
+    const clienteEmail = document.getElementById("clienteEmail").value;
+    const clienteTelefone = document.getElementById("clienteTelefone").value;
+    const clienteCpf = document.getElementById("clienteCPF").value;
+
+    const id = document.getElementById("clienteId").value;
+    const cliente = {
+      cli_nome: clienteNome,
+      cli_email: clienteEmail,
+      cli_telefone: clienteTelefone,
+      cli_cpf: clienteCpf,
+    };
+    let url = "http://localhost:3000/clientes";
+    let method = "POST";
+    if (id) {
+      url += `/${id}`;
+      method = "PUT";
+    }
+    fetch(url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(cliente),
+    })
+      .then((response) => {
+        return response.json();
+      })
+      .then(() => {
+        // alert("Cliente salvo com sucesso!");
+        formularioCliente.reset();
+        exibirTabelaClientes();
+        const modalElement = document.getElementById("clienteModal");
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+      })
+      .catch((error) => {
+        console.error("Erro:", error);
+      });
+  }
+}
+
+function exibirTabelaClientes() {
+  const tabelaClientes = document.getElementById("tabelaClientes");
+  tabelaClientes.innerHTML = "";
+  fetch("http://localhost:3000/clientes")
+    .then((response) => response.json())
+    .then((response) => {
+      if (response.clientes.length > 0) {
+        const tabela = document.createElement("table");
+        tabela.className = "table table-striped table-hover";
+        const cabecalho = document.createElement("thead");
+        cabecalho.innerHTML = `
+          <tr>
+            <th>ID</th> 
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>CPF</th>
+            <th>Ações</th>
+          </tr>
+        `;
+        tabela.appendChild(cabecalho);
+        const corpoTabela = document.createElement("tbody");
+
+        for (const cliente of response.clientes) {
+          const linha = document.createElement("tr");
+          linha.innerHTML = `
+            <td>${cliente.id}</td>
+            <td>${cliente.cli_nome}</td>
+            <td>${cliente.cli_email}</td>
+            <td>${cliente.cli_telefone}</td>
+            <td>${cliente.cli_cpf}</td>
+            <td>
+              <button class="btn btn-sm btn-primary me-2" onclick="editarCliente(${cliente.id})">Editar</button>
+              <button class="btn btn-sm btn-danger" onclick="excluirCliente(${cliente.id})">Excluir</button>
+            </td>
+          `;
+          corpoTabela.appendChild(linha);
+        }
+        tabela.appendChild(corpoTabela);
+        tabelaClientes.appendChild(tabela);
+      }
+    });
+}
+
+function excluirCliente(id) {
+  fetch(`http://localhost:3000/clientes/${id}`, {
+    method: "DELETE",
+  })
+    .then((response) => response.json())
+    .then(() => {
+      exibirTabelaClientes();
+    })
+    .catch((error) => {
+      console.error("Erro:", error);
+    });
+}
+
+function editarCliente(id) {
+  fetch(`http://localhost:3000/clientes/${id}`)
+    .then((response) => response.json())
+    .then((response) => {
+      const cliente = response.cliente;
+      document.getElementById("clienteId").value = cliente.id;
+      document.getElementById("clienteNome").value = cliente.cli_nome;
+      document.getElementById("clienteEmail").value = cliente.cli_email;
+      document.getElementById("clienteTelefone").value = cliente.cli_telefone;
+      document.getElementById("clienteCPF").value = cliente.cli_cpf;
+    })
+    .catch((error) => {
+      console.error("Erro:", error);
+    });
+  const modalElement = document.getElementById("clienteModal");
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
 }
